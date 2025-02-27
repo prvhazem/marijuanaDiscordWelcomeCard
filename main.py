@@ -1,4 +1,5 @@
 import os
+# Set Gunicorn to use Uvicorn's ASGI worker
 os.environ["GUNICORN_CMD_ARGS"] = "--worker-class uvicorn.workers.UvicornWorker"
 
 import logging
