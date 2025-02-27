@@ -51,9 +51,7 @@ async def health():
     return {"status": "healthy", "message": "API is running"}
 
 BACKGROUNDS = [
-    "https://images.unsplash.com/photo-1513151233558-d860c5398176",  # Abstract
-    "https://images.unsplash.com/photo-1503455637927-730bce8583c0",  # Space
-    "https://images.unsplash.com/photo-1579546929518-9e396f3cc809"   # Gradient
+"https://media.discordapp.net/attachments/1344440825215713393/1344632742985470054/W3PacOL.png?ex=67c19e53&is=67c04cd3&hm=1be70e161bd593bdf8ef10e82448d0c01ca11f6b2d0a563adef3d9a5146147b1&=&width=292&height=350"
 ]
 DEFAULT_AVATAR = "https://images.unsplash.com/photo-1579781403337-de692320718a"
 
