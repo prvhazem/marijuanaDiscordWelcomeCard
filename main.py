@@ -1,11 +1,11 @@
 import os
-# Set Gunicorn to use Uvicorn's ASGI worker
-os.environ["GUNICORN_CMD_ARGS"] = "--worker-class uvicorn.workers.UvicornWorker"
+# Set Gunicorn to use Uvicorn's ASGI worker. This line is irrelevant now that we are using Flask.
+#os.environ["GUNICORN_CMD_ARGS"] = "--worker-class uvicorn.workers.UvicornWorker"
 
 import logging
-from fastapi import FastAPI, Query, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
+#from fastapi import FastAPI, Query, HTTPException, Request
+#from fastapi.responses import FileResponse, JSONResponse
+#from fastapi.middleware.cors import CORSMiddleware
 import urllib.parse
 import traceback
 
@@ -16,43 +16,41 @@ logger = logging.getLogger(__name__)
 # Log startup environment
 logger.debug(f"GUNICORN_CMD_ARGS: {os.environ.get('GUNICORN_CMD_ARGS')}")
 
-app = FastAPI(
-    title="Discord Welcome Card Generator",
-    description="API to generate welcome cards for Discord users",
-    version="1.0.0"
-)
+#app = FastAPI(
+#    title="Discord Welcome Card Generator",
+#    description="API to generate welcome cards for Discord users",
+#    version="1.0.0"
+#)
+#
 
-@app.on_event("startup")
-async def startup_event():
-    logger.debug("FastAPI application startup complete")
+#@app.on_event("startup")
+#async def startup_event():
+#    logger.debug("FastAPI application startup complete")
+#
+## Add CORS middleware. This is now handled by Flask-Cors if needed.
+#app.add_middleware(
+#    CORSMiddleware,
+#    allow_origins=["*"],
+#    allow_credentials=True,
+#    allow_methods=["*"],
+#    allow_headers=["*"],
+#)
+#
+#@app.exception_handler(Exception)
+#async def global_exception_handler(request: Request, exc: Exception):
+#    logger.error(f"Unhandled error: {exc}")
+#    logger.error(traceback.format_exc())
+#    return JSONResponse(
+#        status_code=500,
+#        content={"detail": str(exc)},
+#    )
+#
+#@app.get("/health")
+#async def health():
+#    """Health check endpoint to verify API is working"""
+#    logger.debug("Health check endpoint called")
+#    return {"status": "healthy", "message": "API is running"}
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled error: {exc}")
-    logger.error(traceback.format_exc())
-    return JSONResponse(
-        status_code=500,
-        content={"detail": str(exc)},
-    )
-
-@app.get("/health")
-async def health():
-    """Health check endpoint to verify API is working"""
-    logger.debug("Health check endpoint called")
-    return {"status": "healthy", "message": "API is running"}
-
-BACKGROUNDS = [
-"https://media.discordapp.net/attachments/1344440825215713393/1344632742985470054/W3PacOL.png?ex=67c19e53&is=67c04cd3&hm=1be70e161bd593bdf8ef10e82448d0c01ca11f6b2d0a563adef3d9a5146147b1&=&width=292&height=350"
-]
 DEFAULT_AVATAR = "https://images.unsplash.com/photo-1579781403337-de692320718a"
 
 def is_valid_url(url: str) -> bool:
@@ -62,42 +60,13 @@ def is_valid_url(url: str) -> bool:
     except:
         return False
 
-@app.get("/generate-card")
-async def generate_card(
-    username: str = Query(..., description="The username to display on the card"),
-    avatar_url: str = Query(DEFAULT_AVATAR, description="URL of the user's avatar image"),
-    background: int = Query(0, description="Background style (0: Abstract, 1: Space, 2: Gradient)")
-):
-    """
-    Generate a welcome card with the given parameters.
-    Returns a PNG image file of the generated welcome card.
-    """
-    logger.debug(f"Received request with username={username}, avatar_url={avatar_url}, background={background}")
+#The following functions are now assumed to be in the Flask app, and will be called from the Flask routes.
+#These functions are not modified.
 
-    # Input validation
-    if not username.strip():
-        raise HTTPException(status_code=400, detail="Username is required")
+# from app import generate_welcome_card #This is assumed to be handled by the Flask app now.
 
-    if not is_valid_url(avatar_url):
-        logger.warning(f"Invalid avatar URL provided: {avatar_url}, using default")
-        avatar_url = DEFAULT_AVATAR
 
-    if background not in range(len(BACKGROUNDS)):
-        logger.warning(f"Invalid background index: {background}, using default")
-        background = 0
+from app import app
 
-    try:
-        #This line is crucial, otherwise the import will fail and the code won't run.  
-        from card_generator import generate_welcome_card
-        output_path = generate_welcome_card(
-            username,
-            avatar_url,
-            BACKGROUNDS[background]
-        )
-        logger.debug(f"Card generated successfully at {output_path}")
-        return FileResponse(output_path, media_type="image/png", filename="welcome-card.png")
-
-    except Exception as e:
-        logger.error(f"Error generating card: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail="Failed to generate welcome card")
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

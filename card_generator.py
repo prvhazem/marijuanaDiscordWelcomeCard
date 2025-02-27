@@ -8,20 +8,19 @@ def download_image(url):
     response = requests.get(url)
     return Image.open(BytesIO(response.content))
 
-def generate_welcome_card(username, avatar_url, background_url):
-    # Download images
-    background = download_image(background_url)
-    avatar = download_image(avatar_url)
-
-    # Resize background to 1200x400
-    background = background.resize((1200, 400))
+def generate_welcome_card(username, avatar_url):
+    # Create a new blank image with the specified dimensions
+    background = Image.new('RGBA', (849, 1085), (44, 47, 51))  # Discord-like dark background
 
     # Create a darker overlay for better text visibility
-    overlay = Image.new('RGBA', background.size, (0, 0, 0, 128))
-    background = Image.alpha_composite(background.convert('RGBA'), overlay)
+    overlay = Image.new('RGBA', background.size, (0, 0, 0, 64))
+    background = Image.alpha_composite(background, overlay)
+
+    # Download and process avatar
+    avatar = download_image(avatar_url)
 
     # Resize and create circular avatar
-    avatar_size = 150
+    avatar_size = 200  # Larger avatar for the taller card
     avatar = avatar.resize((avatar_size, avatar_size))
 
     # Create circular mask
@@ -35,16 +34,16 @@ def generate_welcome_card(username, avatar_url, background_url):
     output.putalpha(mask)
 
     # Paste avatar onto background
-    avatar_pos = ((background.width - avatar_size) // 2, 50)
+    avatar_pos = ((background.width - avatar_size) // 2, 200)  # Position avatar higher on the taller card
     background.paste(output, avatar_pos, output)
 
-    # Add welcome text
+    # Add text
     draw = ImageDraw.Draw(background)
 
     # Use default font as fallback
     try:
-        font_large = ImageFont.truetype("arial.ttf", 60)
-        font_small = ImageFont.truetype("arial.ttf", 40)
+        font_large = ImageFont.truetype("arial.ttf", 72)
+        font_small = ImageFont.truetype("arial.ttf", 48)
     except:
         font_large = ImageFont.load_default()
         font_small = ImageFont.load_default()
@@ -62,11 +61,11 @@ def generate_welcome_card(username, avatar_url, background_url):
     username_width = username_bbox[2] - username_bbox[0]
     username_x = (background.width - username_width) // 2
 
-    # Draw text
-    draw.text((welcome_x, 250), welcome_text, font=font_large, fill='white')
-    draw.text((username_x, 320), username_text, font=font_small, fill='white')
+    # Draw text - positioned lower due to taller card
+    draw.text((welcome_x, 450), welcome_text, font=font_large, fill='white')
+    draw.text((username_x, 550), username_text, font=font_small, fill='white')
 
-    # Save the image to temp directory
+    # Save the image
     temp_dir = os.path.join(os.getcwd(), "temp")
     os.makedirs(temp_dir, exist_ok=True)
     output_path = os.path.join(temp_dir, f"{uuid.uuid4()}.png")
