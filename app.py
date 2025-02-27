@@ -1,11 +1,8 @@
 import os
 import logging
-from flask import Flask, request, render_template, jsonify, send_file
+from flask import Flask, request, send_file
 from card_generator import generate_welcome_card
 import urllib.parse
-import requests
-from PIL import Image
-from io import BytesIO
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -15,7 +12,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "default-secret-key")
 
 # Configure temporary file directory
-TEMP_DIR = "static/temp"
+TEMP_DIR = os.path.join(os.getcwd(), "temp")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 BACKGROUNDS = [
@@ -31,33 +28,45 @@ def is_valid_url(url):
     except:
         return False
 
-def download_image(url):
-    try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        return Image.open(BytesIO(response.content))
-    except Exception as e:
-        logger.error(f"Error downloading image: {e}")
-        return None
+# Log all registered routes
+logger.debug("Registered routes:")
+for rule in app.url_map.iter_rules():
+    logger.debug(f"Route: {rule}")
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+@app.route('/health')
+def health():
+    """Health check endpoint to verify API is working"""
+    return {"status": "healthy", "message": "API is running"}, 200
 
 @app.route('/generate-card')
 def generate_card():
+    """
+    Generate a welcome card with the given parameters
+    Query Parameters:
+    - username (required): The username to display on the card
+    - avatar_url (optional): URL of the user's avatar image
+    - background (optional): Background style (0 or 1)
+    Returns:
+    - PNG image file
+    """
+    logger.debug("Received request for /generate-card")
     username = request.args.get('username', '').strip()
     avatar_url = request.args.get('avatar_url', DEFAULT_AVATAR).strip()
-    background_index = int(request.args.get('background', 0))
+    background_index = int(request.args.get('background', '0'))
+
+    logger.debug(f"Parameters: username={username}, avatar_url={avatar_url}, background={background_index}")
 
     # Input validation
     if not username:
-        return jsonify({'error': 'Username is required'}), 400
-    
+        logger.warning("Username is required but was not provided")
+        return {'error': 'Username is required'}, 400
+
     if not is_valid_url(avatar_url):
+        logger.warning(f"Invalid avatar URL provided: {avatar_url}, using default")
         avatar_url = DEFAULT_AVATAR
-    
+
     if background_index not in [0, 1]:
+        logger.warning(f"Invalid background index: {background_index}, using default")
         background_index = 0
 
     try:
@@ -67,12 +76,9 @@ def generate_card():
             avatar_url,
             BACKGROUNDS[background_index]
         )
-        
+        logger.debug(f"Card generated successfully at {output_path}")
         return send_file(output_path, mimetype='image/png')
-    
+
     except Exception as e:
         logger.error(f"Error generating card: {e}")
-        return jsonify({'error': 'Failed to generate welcome card'}), 500
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+        return {'error': 'Failed to generate welcome card'}, 500
