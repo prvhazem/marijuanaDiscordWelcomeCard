@@ -1,6 +1,6 @@
 import os
-from flask import Flask, request, send_file
 import logging
+from flask import Flask, request, jsonify, send_file
 from card_generator import generate_welcome_card
 
 # Configure logging
@@ -9,34 +9,40 @@ logger = logging.getLogger(__name__)
 
 # Create Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET")
+app.secret_key = os.environ.get("SESSION_SECRET", "default_secret")  # Fallback for secret key
 
-@app.route('/health')
+@app.route('/health', methods=['GET'])
 def health():
-    """Health check endpoint to verify API is working"""
+    """Health check endpoint to verify API is running."""
     logger.debug("Health check endpoint called")
-    return {"status": "healthy", "message": "API is running"}
+    return jsonify({"status": "healthy", "message": "API is running"})
 
-@app.route('/generate-card')
+@app.route('/generate-card', methods=['POST'])
 def generate_card():
-    """Generate a welcome card with the given parameters"""
-    username = request.args.get('username')
-    avatar_url = request.args.get('avatar_url', 'https://images.unsplash.com/photo-1579781403337-de692320718a')
-    
-    logger.debug(f"Received request with username={username}, avatar_url={avatar_url}")
-    
-    # Input validation
-    if not username:
-        return {"error": "Username is required"}, 400
-    
-    try:
-        output_path = generate_welcome_card(username, avatar_url)
-        logger.debug(f"Card generated successfully at {output_path}")
-        return send_file(output_path, mimetype='image/png', as_attachment=True, download_name='welcome-card.png')
-    except Exception as e:
-        logger.error(f"Error generating card: {e}")
-        return {"error": "Failed to generate welcome card"}, 500
+    """Generate a welcome card and return the image file."""
+    data = request.get_json()
 
-if __name__ == '__main__':
-    # ALWAYS serve the app on port 5000
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    avatar_url = data.get('avatar_url')
+
+    if not avatar_url:
+        return jsonify({"error": "Avatar URL is required"}), 400
+
+    logger.debug(f"Received request with avatar_url={avatar_url}")
+
+    try:
+        output_path = generate_welcome_card(avatar_url)
+        if not output_path:
+            return jsonify({"error": "Failed to generate welcome card"}), 500
+
+        logger.info(f"Generated welcome card: {output_path}")
+        return send_file(output_path, mimetype='image/png')
+
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return jsonify({"error": "Internal Server Error"}), 500
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

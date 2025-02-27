@@ -1,74 +1,36 @@
-import os
-import uuid
-from PIL import Image, ImageDraw, ImageFont
+import os,uuid,logging
+from PIL import Image,ImageDraw
 import requests
 from io import BytesIO
-
-def download_image(url):
-    response = requests.get(url)
-    return Image.open(BytesIO(response.content))
-
-def generate_welcome_card(username, avatar_url):
-    # Create a new blank image with the specified dimensions
-    background = Image.new('RGBA', (849, 1085), (44, 47, 51))  # Discord-like dark background
-
-    # Create a darker overlay for better text visibility
-    overlay = Image.new('RGBA', background.size, (0, 0, 0, 64))
-    background = Image.alpha_composite(background, overlay)
-
-    # Download and process avatar
-    avatar = download_image(avatar_url)
-
-    # Resize and create circular avatar
-    avatar_size = 200  # Larger avatar for the taller card
-    avatar = avatar.resize((avatar_size, avatar_size))
-
-    # Create circular mask
-    mask = Image.new('L', (avatar_size, avatar_size), 0)
-    draw = ImageDraw.Draw(mask)
-    draw.ellipse((0, 0, avatar_size, avatar_size), fill=255)
-
-    # Apply mask to avatar
-    output = Image.new('RGBA', (avatar_size, avatar_size), (0, 0, 0, 0))
-    output.paste(avatar, (0, 0))
-    output.putalpha(mask)
-
-    # Paste avatar onto background
-    avatar_pos = ((background.width - avatar_size) // 2, 200)  # Position avatar higher on the taller card
-    background.paste(output, avatar_pos, output)
-
-    # Add text
-    draw = ImageDraw.Draw(background)
-
-    # Use default font as fallback
+logging.basicConfig(level=logging.DEBUG)
+logger=logging.getLogger(__name__)
+BACKGROUND_URL="https://media.discordapp.net/attachments/1344440825215713393/1344634166352019456/b9LOn2T.png?ex=67c19fa7&is=67c04e27&hm=cfe5b7b4e741c59465f0b246f9d6240e10097799f2eaae2052beaf6fd9c055e2&=&width=529&height=676"
+def download_image(url,default_size=(255,255)):
     try:
-        font_large = ImageFont.truetype("arial.ttf", 72)
-        font_small = ImageFont.truetype("arial.ttf", 48)
-    except:
-        font_large = ImageFont.load_default()
-        font_small = ImageFont.load_default()
-
-    # Add text
-    welcome_text = "Welcome!"
-    username_text = f"@{username}"
-
-    # Calculate text positions
-    welcome_bbox = draw.textbbox((0, 0), welcome_text, font=font_large)
-    welcome_width = welcome_bbox[2] - welcome_bbox[0]
-    welcome_x = (background.width - welcome_width) // 2
-
-    username_bbox = draw.textbbox((0, 0), username_text, font=font_small)
-    username_width = username_bbox[2] - username_bbox[0]
-    username_x = (background.width - username_width) // 2
-
-    # Draw text - positioned lower due to taller card
-    draw.text((welcome_x, 450), welcome_text, font=font_large, fill='white')
-    draw.text((username_x, 550), username_text, font=font_small, fill='white')
-
-    # Save the image
-    temp_dir = os.path.join(os.getcwd(), "temp")
-    os.makedirs(temp_dir, exist_ok=True)
-    output_path = os.path.join(temp_dir, f"{uuid.uuid4()}.png")
-    background.save(output_path, 'PNG')
-
-    return output_path
+        response=requests.get(url,stream=True,timeout=5)
+        response.raise_for_status()
+        return Image.open(BytesIO(response.content)).convert("RGBA")
+    except Exception as e:
+        logger.error(f"Error downloading image from {url}: {e}")
+        return Image.new("RGBA",default_size,(200,200,200,255))
+def generate_welcome_card(avatar_url):
+    try:
+        bg_width,bg_height=849,1085
+        background=download_image(BACKGROUND_URL,default_size=(bg_width,bg_height)).resize((bg_width,bg_height))
+        avatar_size=255
+        avatar=download_image(avatar_url,default_size=(avatar_size,avatar_size)).resize((avatar_size,avatar_size))
+        if avatar.mode!="RGBA":avatar=avatar.convert("RGBA")
+        mask=Image.new("L",(avatar_size,avatar_size),0)
+        ImageDraw.Draw(mask).ellipse((0,0,avatar_size,avatar_size),fill=255)
+        avatar.putalpha(mask)
+        avatar_pos=((bg_width-avatar_size)//2,64+(200-avatar_size)//2)
+        background.paste(avatar,avatar_pos,avatar)
+        temp_dir=os.path.join(os.getcwd(),"static")
+        os.makedirs(temp_dir,exist_ok=True)
+        output_path=os.path.join(temp_dir,f"{uuid.uuid4()}.png")
+        background.save(output_path,"PNG")
+        logger.info(f"Card saved at: {output_path}")
+        return output_path
+    except Exception as e:
+        logger.error(f"Error generating welcome card: {e}")
+        return None

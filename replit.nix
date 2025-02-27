@@ -1,5 +1,7 @@
 {pkgs}: {
   deps = [
+    pkgs.imagemagick_light
+    pkgs.lsof
     pkgs.zlib
     pkgs.tk
     pkgs.tcl
