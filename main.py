@@ -1,9 +1,13 @@
 import os
+os.environ["GUNICORN_CMD_ARGS"] = "--worker-class uvicorn.workers.UvicornWorker"
+
 import logging
-from fastapi import FastAPI, Query, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Query, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from card_generator import generate_welcome_card
 import urllib.parse
+import traceback
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -13,6 +17,15 @@ app = FastAPI(
     title="Discord Welcome Card Generator",
     description="API to generate welcome cards for Discord users",
     version="1.0.0"
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Configure temporary file directory
@@ -32,9 +45,19 @@ def is_valid_url(url: str) -> bool:
     except:
         return False
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled error: {exc}")
+    logger.error(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+    )
+
 @app.get("/health")
 async def health():
     """Health check endpoint to verify API is working"""
+    logger.debug("Health check endpoint called")
     return {"status": "healthy", "message": "API is running"}
 
 @app.get("/generate-card")
@@ -73,8 +96,5 @@ async def generate_card(
 
     except Exception as e:
         logger.error(f"Error generating card: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Failed to generate welcome card")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
