@@ -4,7 +4,7 @@ import requests
 from io import BytesIO
 logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger(__name__)
-BACKGROUND_URL="https://i.imgur.com/mPXCxjs.png"
+BACKGROUND_URL="https://files.catbox.moe/vr59iz.png"
 def download_image(url,default_size=(255,255)):
     try:
         response=requests.get(url,stream=True,timeout=5)
