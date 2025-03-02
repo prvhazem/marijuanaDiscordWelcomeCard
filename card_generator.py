@@ -4,7 +4,7 @@ import requests
 from io import BytesIO
 logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger(__name__)
-BACKGROUND_URL="https://media.discordapp.net/attachments/1344440825215713393/1344634166352019456/b9LOn2T.png?ex=67c442a7&is=67c2f127&hm=f873f842388c5188277a81b92b895dcf54a205d7d25478842446134642de6cf3&=&width=274&height=350"
+BACKGROUND_URL="https://media.discordapp.net/attachments/1344440825215713393/1344634166352019456/b9LOn2T.png?ex=67c59427&is=67c442a7&hm=f54a49839c1d507eb904139d8752e3ef5ba1ba0ec781017eaa64b991517fb6d5&=&width=757&height=967"
 def download_image(url,default_size=(255,255)):
     try:
         response=requests.get(url,stream=True,timeout=5)
